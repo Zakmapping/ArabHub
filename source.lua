@@ -1,14 +1,25 @@
--- ServerSide Controller (يجب وضعه في Script في ServerScriptService)
-local ServerController = [[
-local Players = game:GetService("Players")
-local ServerStorage = game:GetService("ServerStorage")
+--[[
+  هذا السكربت يعمل كاملاً من خلال الـExecutor (مثل Synapse/Krnl)
+  بدون الحاجة لوضعه في ServerScriptService
+  ولكنه يحاكي عمل Server-Side للأوامر المهمة
+]]
 
-local function executeCommand(player, cmd, ...)
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local mouse = player:GetMouse()
+
+-- محاكاة Server-Side عبر إعادة تعريف الدوال الأساسية
+local function executeServerSide(cmd, ...)
     local args = {...}
+    local character = player.Character or player.CharacterAdded:Wait()
     
     if cmd == "killall" then
         for _, target in ipairs(Players:GetPlayers()) do
-            if target.Character then
+            if target ~= player and target.Character then
                 local humanoid = target.Character:FindFirstChildOfClass("Humanoid")
                 if humanoid then
                     humanoid.Health = 0
@@ -16,66 +27,59 @@ local function executeCommand(player, cmd, ...)
             end
         end
     elseif cmd == "god" then
-        if player.Character then
-            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+        if character then
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
             if humanoid then
                 humanoid.MaxHealth = math.huge
                 humanoid.Health = math.huge
             end
         end
     elseif cmd == "fling" then
-        if player.Character then
-            local root = player.Character:FindFirstChild("HumanoidRootPart")
+        if character then
+            local root = character:FindFirstChild("HumanoidRootPart")
             if root then
                 root.Velocity = Vector3.new(math.random(-5000,5000), math.random(-5000,5000), math.random(-5000,5000))
             end
         end
     elseif cmd == "size" then
         local scale = tonumber(args[1]) or 1
-        if player.Character then
-            for _, part in ipairs(player.Character:GetDescendants()) do
+        if character then
+            for _, part in ipairs(character:GetDescendants()) do
                 if part:IsA("BasePart") then
                     part.Size = part.Size * scale
                 end
             end
         end
+    elseif cmd == "f3x" then
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/VisualRoblox/Roblox/main/F3X.lua", true))()
+    elseif cmd == "fly" then
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/SuperCuteBunny/Roblox-HAX/main/Fly.lua", true))()
+    elseif cmd == "noclip" then
+        local noclip = false
+        noclip = not noclip
+        
+        RunService.Stepped:Connect(function()
+            if noclip and character then
+                for _, part in pairs(character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end)
+    elseif cmd == "speed" then
+        local speed = tonumber(args[1]) or 50
+        speed = math.clamp(speed, 0, 1000)
+        if character then
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.WalkSpeed = speed
+            end
+        end
     end
 end
 
-local function onClientInvoke(player, cmd, ...)
-    pcall(executeCommand, player, cmd, ...)
-    return true
-end
-
-local function initPlayer(player)
-    local remote = Instance.new("RemoteFunction")
-    remote.Name = "ArabHubRemote"
-    remote.Parent = player
-    
-    remote.OnServerInvoke = onClientInvoke
-end
-
-Players.PlayerAdded:Connect(initPlayer)
-for _, player in ipairs(Players:GetPlayers()) do
-    initPlayer(player)
-end
-]]
-
--- Client UI (يتم حقنه من خلال executor)
-local ArabHubUI = [[
-local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
-
-local player = Players.LocalPlayer
-local arabHubRemote = player:WaitForChild("ArabHubRemote", 10)
-
-if not arabHubRemote then
-    warn("ArabHub: ServerSide غير نشط!")
-    return
-end
-
--- تصميم الواجهة المتميز
+-- تصميم الواجهة الفاخرة
 local ArabHub = Instance.new("ScreenGui")
 ArabHub.Name = "ArabHub"
 ArabHub.Parent = game:GetService("CoreGui")
@@ -87,27 +91,31 @@ MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
 MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ArabHub
 
--- تأثير زجاجي
-local GlassEffect = Instance.new("Frame")
+-- تأثير زجاجي متطور
+local GlassEffect = Instance.new("ImageLabel")
 GlassEffect.Size = UDim2.new(1, 0, 1, 0)
-GlassEffect.BackgroundTransparency = 0.95
-GlassEffect.BackgroundColor3 = Color3.fromRGB(50, 50, 80)
-GlassEffect.BorderSizePixel = 0
+GlassEffect.Image = "rbxassetid://8992230431"
+GlassEffect.ScaleType = Enum.ScaleType.Slice
+GlassEffect.SliceScale = 0.02
+GlassEffect.ImageTransparency = 0.1
+GlassEffect.ImageColor3 = Color3.fromRGB(30, 30, 50)
+GlassEffect.BackgroundTransparency = 1
 GlassEffect.ZIndex = -1
 GlassEffect.Parent = MainFrame
 
--- زوايا مستديرة
+-- زوايا مستديرة متدرجة
 local UICorner = Instance.new("UICorner")
 UICorner.CornerRadius = UDim.new(0.03, 0)
 UICorner.Parent = MainFrame
 
--- ظل أنيق
+-- ظل متحرك ديناميكي
 local UIStroke = Instance.new("UIStroke")
 UIStroke.Color = Color3.fromRGB(100, 100, 150)
 UIStroke.Thickness = 2
+UIStroke.Transparency = 0.7
 UIStroke.Parent = MainFrame
 
--- شريط العنوان
+-- شريط العنوان المميز
 local TitleBar = Instance.new("Frame")
 TitleBar.Size = UDim2.new(1, 0, 0.08, 0)
 TitleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
@@ -118,10 +126,18 @@ local TitleCorner = Instance.new("UICorner")
 TitleCorner.CornerRadius = UDim.new(0.03, 0)
 TitleCorner.Parent = TitleBar
 
+-- شعار ArabHub
+local Logo = Instance.new("ImageLabel")
+Logo.Size = UDim2.new(0.08, 0, 0.8, 0)
+Logo.Position = UDim2.new(0.01, 0, 0.1, 0)
+Logo.Image = "rbxassetid://7072717361" -- يمكن استبدالها بأيقونة خاصة
+Logo.BackgroundTransparency = 1
+Logo.Parent = TitleBar
+
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(0.8, 0, 1, 0)
+Title.Size = UDim2.new(0.7, 0, 1, 0)
 Title.Position = UDim2.new(0.1, 0, 0, 0)
-Title.Text = "ArabHub - Premium"
+Title.Text = "ArabHub VIP"
 Title.TextColor3 = Color3.fromRGB(220, 220, 255)
 Title.BackgroundTransparency = 1
 Title.Font = Enum.Font.GothamBold
@@ -142,7 +158,7 @@ local CloseCorner = Instance.new("UICorner")
 CloseCorner.CornerRadius = UDim.new(0.5, 0)
 CloseCorner.Parent = CloseButton
 
--- منطقة الأزرار
+-- منطقة الأزرار المميزة
 local ButtonsFrame = Instance.new("ScrollingFrame")
 ButtonsFrame.Size = UDim2.new(0.95, 0, 0.88, 0)
 ButtonsFrame.Position = UDim2.new(0.025, 0, 0.1, 0)
@@ -157,7 +173,7 @@ ButtonsLayout.CellSize = UDim2.new(0.3, 0, 0.15, 0)
 ButtonsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 ButtonsLayout.Parent = ButtonsFrame
 
--- الأيقونات المخصصة
+-- نظام الأيقونات المخصصة
 local Icons = {
     KillAll = "rbxassetid://7072717361",
     God = "rbxassetid://7072720392",
@@ -169,8 +185,8 @@ local Icons = {
     Speed = "rbxassetid://7072714321"
 }
 
--- إنشاء أزرار الأوامر
-local function createCommandButton(cmdName, iconId, description)
+-- إنشاء أزرار الأوامر المميزة
+local function createCommandButton(cmdName, iconId, description, cmdType)
     local Button = Instance.new("TextButton")
     Button.Size = UDim2.new(1, 0, 1, 0)
     Button.BackgroundColor3 = Color3.fromRGB(35, 35, 55)
@@ -181,6 +197,14 @@ local function createCommandButton(cmdName, iconId, description)
     local ButtonCorner = Instance.new("UICorner")
     ButtonCorner.CornerRadius = UDim.new(0.15, 0)
     ButtonCorner.Parent = Button
+    
+    local ButtonGradient = Instance.new("UIGradient")
+    ButtonGradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(60, 60, 90)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(40, 40, 70))
+    }
+    ButtonGradient.Rotation = 90
+    ButtonGradient.Parent = Button
     
     local ButtonStroke = Instance.new("UIStroke")
     ButtonStroke.Color = Color3.fromRGB(80, 80, 120)
@@ -216,26 +240,8 @@ local function createCommandButton(cmdName, iconId, description)
     Desc.TextWrapped = true
     Desc.Parent = Button
     
-    return Button
-end
-
--- الأوامر المتاحة
-local Commands = {
-    {Name = "قتل الجميع", Icon = Icons.KillAll, Desc = "يقتل كل اللاعبين", Cmd = "killall"},
-    {Name = "عدم الموت", Icon = Icons.God, Desc = "مناعة ضد الضرر", Cmd = "god"},
-    {Name = "رمي اللاعب", Icon = Icons.Fling, Desc = "يرمي اللاعب بعيداً", Cmd = "fling"},
-    {Name = "تغيير الحجم", Icon = Icons.Size, Desc = "يغير حجم شخصيتك", Cmd = "size", HasInput = true},
-    {Name = "أدوات بناء", Icon = Icons.F3X, Desc = "أدوات بناء متقدمة", Cmd = "f3x"},
-    {Name = "الطيران", Icon = Icons.Fly, Desc = "يطير في الهواء", Cmd = "fly"},
-    {Name = "تخطي الجدران", Icon = Icons.NoClip, Desc = "يمر عبر الجدران", Cmd = "noclip"},
-    {Name = "السرعة", Icon = Icons.Speed, Desc = "يغير سرعة المشي", Cmd = "speed", HasInput = true}
-}
-
--- إضافة الأزرار
-for _, cmd in ipairs(Commands) do
-    local button = createCommandButton(cmd.Name, cmd.Icon, cmd.Desc)
-    
-    if cmd.HasInput then
+    -- إضافة مربع إدخال إذا كان الأمر يحتاج قيمة
+    if cmdType == "input" then
         local inputBox = Instance.new("TextBox")
         inputBox.Size = UDim2.new(0.8, 0, 0.25, 0)
         inputBox.Position = UDim2.new(0.1, 0, 0.5, 0)
@@ -245,15 +251,37 @@ for _, cmd in ipairs(Commands) do
         inputBox.Text = ""
         inputBox.Font = Enum.Font.Gotham
         inputBox.TextSize = 12
-        inputBox.Parent = button
+        inputBox.Parent = Button
         
-        button.MouseButton1Click:Connect(function()
-            local value = inputBox.Text
-            arabHubRemote:InvokeServer(cmd.Cmd, value)
+        return inputBox
+    end
+    
+    return Button
+end
+
+-- الأوامر المتاحة
+local Commands = {
+    {Name = "قتل الجميع", Icon = Icons.KillAll, Desc = "يقتل كل اللاعبين", Cmd = "killall"},
+    {Name = "عدم الموت", Icon = Icons.God, Desc = "مناعة ضد الضرر", Cmd = "god"},
+    {Name = "رمي اللاعب", Icon = Icons.Fling, Desc = "يرمي اللاعب بعيداً", Cmd = "fling"},
+    {Name = "تغيير الحجم", Icon = Icons.Size, Desc = "يغير حجم شخصيتك", Cmd = "size", Type = "input"},
+    {Name = "أدوات بناء", Icon = Icons.F3X, Desc = "أدوات بناء متقدمة", Cmd = "f3x"},
+    {Name = "الطيران", Icon = Icons.Fly, Desc = "يطير في الهواء", Cmd = "fly"},
+    {Name = "تخطي الجدران", Icon = Icons.NoClip, Desc = "يمر عبر الجدران", Cmd = "noclip"},
+    {Name = "السرعة", Icon = Icons.Speed, Desc = "يغير سرعة المشي", Cmd = "speed", Type = "input"}
+}
+
+-- إضافة الأزرار
+for _, cmd in ipairs(Commands) do
+    local button = createCommandButton(cmd.Name, cmd.Icon, cmd.Desc, cmd.Type)
+    
+    if cmd.Type == "input" then
+        button.FocusLost:Connect(function()
+            executeServerSide(cmd.Cmd, button.Text)
         end)
     else
         button.MouseButton1Click:Connect(function()
-            arabHubRemote:InvokeServer(cmd.Cmd)
+            executeServerSide(cmd.Cmd)
         end)
     end
 end
@@ -263,7 +291,7 @@ ButtonsLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     ButtonsFrame.CanvasSize = UDim2.new(0, 0, 0, ButtonsLayout.AbsoluteContentSize.Y + 10)
 end)
 
--- نظام التحريك وتغيير الحجم
+-- نظام التحريك وتغيير الحجم المتطور
 local dragging, resizing, dragStart, startPos, startSize
 
 local function updatePosition(input)
@@ -283,13 +311,26 @@ local function updateSize(input)
     TweenService:Create(MainFrame, TweenInfo.new(0.1), {Size = newSize}):Play()
 end
 
+-- مؤشر تغيير الحجم
+local ResizeIndicator = Instance.new("Frame")
+ResizeIndicator.Size = UDim2.new(0, 10, 0, 10)
+ResizeIndicator.Position = UDim2.new(1, -10, 1, -10)
+ResizeIndicator.BackgroundColor3 = Color3.fromRGB(100, 100, 150)
+ResizeIndicator.BorderSizePixel = 0
+ResizeIndicator.Parent = MainFrame
+
+local ResizeCorner = Instance.new("UICorner")
+ResizeCorner.CornerRadius = UDim.new(0.5, 0)
+ResizeCorner.Parent = ResizeIndicator
+
 MainFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         local absolutePosition = input.Position.X - MainFrame.AbsolutePosition.X
         local absoluteSize = MainFrame.AbsoluteSize.X
         
         -- التحقق إذا كان النقر على الزاوية لتغيير الحجم
-        if absolutePosition > absoluteSize - 20 then
+        if (input.Position - MainFrame.AbsolutePosition).X > MainFrame.AbsoluteSize.X - 20 and
+           (input.Position - MainFrame.AbsolutePosition).Y > MainFrame.AbsoluteSize.Y - 20 then
             resizing = true
             dragStart = input.Position
             startSize = MainFrame.Size
@@ -338,8 +379,11 @@ UserInputService.InputBegan:Connect(function(input, processed)
         MainFrame.Visible = isVisible
     end
 end)
-]]
 
--- كيفية الاستخدام:
--- 1. ضع الجزء الأول (ServerController) في Script داخل ServerScriptService
--- 2. استخدم الجزء الثاني (ArabHubUI) في executor مثل Synapse أو Krnl
+-- تأثيرات إضافية عند التفاعل
+mouse.Move:Connect(function()
+    ResizeIndicator.BackgroundColor3 = (mouse.X > MainFrame.AbsolutePosition.X + MainFrame.AbsoluteSize.X - 20 and 
+                                      mouse.Y > MainFrame.AbsolutePosition.Y + MainFrame.AbsoluteSize.Y - 20) and 
+                                      Color3.fromRGB(150, 150, 200) or 
+                                      Color3.fromRGB(100, 100, 150)
+end)
